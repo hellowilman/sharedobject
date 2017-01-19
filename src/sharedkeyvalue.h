@@ -64,8 +64,8 @@ public:
             }
         }
     }
+
     static int setdata(char* buf, const std::string &key, const std::string &val){
-        printf("key size is %d\n", key.size());
         memcpy(buf , key.data(), key.size());
         memcpy(buf +MSG_KEY_SIZE, val.data(), val.size());
         return 0;
@@ -104,6 +104,7 @@ private:
 };
 
 class SharedKeyValueSrv:public ShareKeyValueSrvAPI{
+
 public:
     SharedKeyValueSrv();
     // ShareKeyValueSrvAPI interface
@@ -113,8 +114,8 @@ public:
     int sync();
 private:
     zmq::context_t context;
-    zmq::socket_t socket_pub;
-    zmq::socket_t socket_rep;
+    zmq::socket_t  socket_pub;
+    zmq::socket_t  socket_rep;
 
     int process_req(const std::string & s);
 
@@ -125,24 +126,25 @@ private:
     SharedData data_;
 };
 
-class SharedKeyValue:public ShareKeyValueAPI, public ShareKeyValueSrvAPI
+class SharedKeyValueCli:public ShareKeyValueAPI
 {
-public:
-    SharedKeyValue(int mode = 0);
 
+public:
+    SharedKeyValueCli(int mode = 0);
     // ShareKeyValueAPI interface
+
 public:
     int get(std::string key, std::string *pval);
     int set(std::string key, std::string value);
     int sync();
     int on(std::string key, CallBack func);
-    int init(std::string host, int port);
+    int init(std::string host, int port = 16578);
 
 private:
     zmq::context_t context;
 
-    zmq::socket_t socket_sub;
-    zmq::socket_t socket_req; // client
+    zmq::socket_t socket_sub; // listen to server if any update
+    zmq::socket_t socket_req;  // client send req to server if set
 
     SharedData data_;
     std::map<std::string, CallBack> callbacks_;
@@ -151,6 +153,12 @@ private:
     std::string host_;
     int port_;
 
+    // some functions used in thread
+    void thread_sub();
+    bool thread_sub_flag_; // if true receiving from pub server
+    int msg_count_;
 };
+
+
 
 #endif // SHAREDKEYVALUE_H
