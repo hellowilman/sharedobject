@@ -30,3 +30,4 @@
 
 # QT
 build-*/
+.DS_Store
