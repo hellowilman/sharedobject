@@ -3,17 +3,17 @@
 
 #define VO_HEADER_SIZE 16
 typedef struct{
-    num ver;
-    num user;
-    num time;
-    num size;
+    NUM ver;
+    NUM user;
+    NUM time;
+    NUM size;
 } VoHeader;
 
 typedef struct{
-    num ver;
-    num vo_num;
-    num size;
-    num reserve;
+    NUM ver;
+    NUM vo_num;
+    NUM size;
+    NUM reserve;
 } SoHeader;
 
 const ValueObject &SharedObjectData::get(const std::__1::string &key)
@@ -26,10 +26,12 @@ const ValueObject &SharedObjectData::get(const std::__1::string &key)
     }
 }
 
-void SharedObjectData::set(const std::__1::string &key, const ValueObject &vo)
+void SharedObjectData::set(const std::string &key, const ValueObject &vo)
 {
     if(key.size()>0){
-       data_[key] = vo;
+       if(get(key).ver_ < vo.ver_){
+           data_[key] = vo;
+       }
     }
 }
 
@@ -40,7 +42,7 @@ const std::string SharedObjectData::toStr() const
     for(auto & kv: data_){
         auto& key = kv.first;
         auto& vo = kv.second;
-        sz += KVObject::size(key,vo)+sizeof(num);
+        sz += KVObject::size(key,vo)+sizeof(NUM);
     }
     std::string out(sz,'\0');
     char* pOut = (char*) out.data();
@@ -54,9 +56,9 @@ const std::string SharedObjectData::toStr() const
     // prepare the kv data
     for(auto &kv:data_){
         auto kvstr = KVObject::toStr(kv.first,kv.second);
-        *((num*) pOut) = kvstr.size();
-        memcpy(pOut+sizeof(num), kvstr.data(), kvstr.size());
-        pOut += sizeof(num) + kvstr.size();
+        *((NUM*) pOut) = kvstr.size();
+        memcpy(pOut+sizeof(NUM), kvstr.data(), kvstr.size());
+        pOut += sizeof(NUM) + kvstr.size();
     }
     return out;
 }
@@ -77,15 +79,15 @@ int SharedObjectData::init(const std::string &data)
     int kv_num = pH->vo_num;
     int rest_num = pH->size;
     while(rest_num>0 && kv_num > 0){
-        int len = *((num*)pData);
-        std::string kvstr(pData+sizeof(num), len);
+        int len = *((NUM*)pData);
+        std::string kvstr(pData+sizeof(NUM), len);
         std::string k;
         ValueObject vo;
         if( KVObject::fromStr(kvstr,k,vo) >=0){
             set(k,vo);
         }
-        rest_num -= len + sizeof(num);
-        pData += len + sizeof(num);
+        rest_num -= len + sizeof(NUM);
+        pData += len + sizeof(NUM);
         kv_num--;
     }
     return pH->vo_num - kv_num;
@@ -114,7 +116,7 @@ ValueObject::ValueObject(const std::string &data)
     fromStr(data);
 }
 
-ValueObject::ValueObject(const std::string &val, num ver, num user, num time)
+ValueObject::ValueObject(const std::string &val, NUM ver, NUM user, NUM time)
 {
     val_ = val;
     time_ = time;
@@ -125,7 +127,7 @@ ValueObject::ValueObject(const std::string &val, num ver, num user, num time)
 const std::string ValueObject::toStr() const
 {
     // prepare data buffer
-    num sz = size();
+    NUM sz = size();
     std::string out(sz,'\0');
     // set header
     VoHeader* pheader = (VoHeader*) out.data();
@@ -171,16 +173,16 @@ void ValueObject::p() const
 
 std::string KVObject::toStr(const std::string &k, const ValueObject &vo)
 {
-    const int NUM_BYTES = sizeof(num);
+    const int NUM_BYTES = sizeof(NUM);
     int sz = KVObject::size(k,vo);
     std::string out(sz,0);
     char* pData = (char*)out.data();
     // copy key
-    *((num*)pData) = k.size();
+    *((NUM*)pData) = k.size();
     memcpy(pData+ NUM_BYTES, k.data(), k.size());
     pData += k.size() + NUM_BYTES;
     // copy VO
-    *((num*)pData) = vo.size();
+    *((NUM*)pData) = vo.size();
     memcpy(pData + NUM_BYTES, vo.toStr().data(), vo.size());
 
     // return
@@ -189,20 +191,20 @@ std::string KVObject::toStr(const std::string &k, const ValueObject &vo)
 
 int KVObject::fromStr(const std::string &data, std::string &key, ValueObject &vo)
 {
-    if(data.size() < sizeof(num)+2){
+    if(data.size() < sizeof(NUM)+2){
         return -1;
     }
     const char* pData = data.data();
-    int keysize = *((num*) pData);
-    if(keysize > data.size() - sizeof(num)){
+    int keysize = *((NUM*) pData);
+    if(keysize > data.size() - sizeof(NUM)){
         return -2;
     }
-    key = data.substr(sizeof(num), keysize);
-    int vosize = *((num*)(pData + sizeof(num) + keysize));
-    if(vosize != data.size() - sizeof(num)*2 - keysize){
+    key = data.substr(sizeof(NUM), keysize);
+    int vosize = *((NUM*)(pData + sizeof(NUM) + keysize));
+    if(vosize != data.size() - sizeof(NUM)*2 - keysize){
         return -3;
     }
-    auto vostr = data.substr(sizeof(num)*2+keysize);
+    auto vostr = data.substr(sizeof(NUM)*2+keysize);
     ValueObject vo1(vostr);
     vo = vo1;
     return 0;
@@ -210,6 +212,6 @@ int KVObject::fromStr(const std::string &data, std::string &key, ValueObject &vo
 
 int KVObject::size(const std::string &k, const ValueObject &vo)
 {
-    const int NUM_BYTES = sizeof(num);
+    const int NUM_BYTES = sizeof(NUM);
     return k.size() + vo.size() + 2 * NUM_BYTES;
 }

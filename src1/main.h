@@ -6,7 +6,12 @@ class MainApp
 {
 public:
     MainApp();
-    void start();
+    void Test1();
+    void Test2();
+    void Test3();
+    void test_all();
+    void start_srv();
+    void start_cli();
 };
 
 #endif // MAIN_H

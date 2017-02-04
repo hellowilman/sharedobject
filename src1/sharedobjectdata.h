@@ -2,14 +2,15 @@
 #define SHAREDOBJECTDATA_H
 #include <string>
 #include <map>
-#define num unsigned int
+
+#define NUM unsigned int
 
 class ValueObject{
 public:
     ValueObject():ver_(0),user_(0),time_(0){}
     ValueObject(const ValueObject & vo);
     ValueObject(const std::string &data);
-    ValueObject(const std::string &val, num ver, num user, num time);
+    ValueObject(const std::string &val, NUM ver, NUM user, NUM time);
     const std::string toStr() const;
     int fromStr(const std::string &data);
     int size() const;
@@ -17,9 +18,9 @@ public:
     void p() const;
 public:
     std::string val_;
-    num ver_;
-    num user_;
-    num time_;
+    NUM ver_;
+    NUM user_;
+    NUM time_;
 };
 
 class KVObject{
@@ -45,7 +46,7 @@ public:
 
 private:
     std::map<std::string, ValueObject> data_;
-    num ver_;
+    NUM ver_;
 };
 
 #endif // SHAREDOBJECTDATA_H
