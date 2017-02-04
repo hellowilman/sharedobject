@@ -27,7 +27,7 @@ public:
     std::string data_;
     enum flag_act{SET = 1, SET_RESP, SYNC, SYNC_RESP, OUT_DATE, MISC, ACK};
     enum msg_type{MSG_SOD,MSG_KV};
-    void p();
+    void p() const;
 };
 
 class SharedObjectCli
@@ -55,9 +55,9 @@ private:
     std::thread *thread_process_subq_;
     std::thread *thread_process_reqq_;
 
-    void thread_for_subsocket();
-    void thread_for_subqueue();
-    void thread_for_reqqueue();
+    void process_subsocket();
+    void process_subqueue();
+    void process_reqqueue();
 
     unsigned int msg_count_ = 0;
     BlockingQueue<SharedObjectMsg> queue_sub;
@@ -76,7 +76,8 @@ class SharedObjectSrv{
 public:
     SharedObjectSrv();
     int bind(const std::string host="tcp://127.0.0.1", int port = 10086);
-
+public:
+    void process_testing();
 private:
     SharedObjectData so_;
     zmq::context_t context;

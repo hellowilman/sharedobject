@@ -64,20 +64,20 @@ int SharedObjectCli::connect(std::string host, int port)
     printf("Req is on %s\n", (server_host_+":"+std::to_string(base_port_+1)).c_str() );
     if(!thread_process_subs_){
         thread_process_subs_ = new std::thread([this](){
-            this->thread_for_subsocket();
+            this->process_subsocket();
         });
     }
     printf("Start thread for subsocket receiving \n");
     if(!thread_process_subq_){
         thread_process_subq_ = new std::thread([this](){
-            this->thread_for_subqueue();
+            this->process_subqueue();
         });
     }
     printf("Start thread for sub queue processing \n");
 
     if(!thread_process_reqq_){
         thread_process_reqq_ = new std::thread([this](){
-            this->thread_for_reqqueue();
+            this->process_reqqueue();
         });
     }
     printf("Start thread for req queue processing \n");
@@ -98,7 +98,7 @@ int SharedObjectCli::connect(std::string host, int port)
     return 0;
 }
 
-void SharedObjectCli::thread_for_subsocket()
+void SharedObjectCli::process_subsocket()
 {
     try{
         while(1){
@@ -118,7 +118,7 @@ void SharedObjectCli::thread_for_subsocket()
     }
 }
 
-void SharedObjectCli::thread_for_subqueue()
+void SharedObjectCli::process_subqueue()
 {
     try{
         while(1){
@@ -131,7 +131,7 @@ void SharedObjectCli::thread_for_subqueue()
     }
 }
 
-void SharedObjectCli::thread_for_reqqueue()
+void SharedObjectCli::process_reqqueue()
 {
     try{
         while(1){
@@ -148,7 +148,10 @@ void SharedObjectCli::thread_for_reqqueue()
 int SharedObjectCli::process_somsg(const std::string &sostr)
 {
     SOMsg somsg;
-    somsg.fromStr(sostr);
+    int rc = somsg.fromStr(sostr);
+    if(rc <0){
+        return -1;
+    }
     return process_somsg(somsg);
 }
 
@@ -175,6 +178,7 @@ int SharedObjectCli::process_somsg(const SharedObjectMsg &somsg)
 
 int SharedObjectCli::process_setresp(const SharedObjectMsg & somsg)
 {
+    somsg.p();
     if(somsg.r1_ == SOMsg::MSG_SOD){
         // not support yet!
         return -100;
@@ -183,7 +187,7 @@ int SharedObjectCli::process_setresp(const SharedObjectMsg & somsg)
         ValueObject vo;
         std::string k;
         KVObject::fromStr(somsg.data_, k, vo);
-        // insert k,vo to so_
+        printf("insert k-v: %s-%s\n",k.c_str(), vo.val_.c_str());
         so_.set(k,vo);
         return 0;
     }
@@ -219,6 +223,11 @@ typedef struct{
     NUM size;
     NUM r1,r2; // reserved
 } SOMsgHeader;
+unsigned int SharedObjectMsg::size() const
+{
+    return data_.size() + sizeof(SOMsgHeader);
+}
+
 const std::string SharedObjectMsg::toStr() const
 {
     // get the size and prepare the data buffer
@@ -240,10 +249,6 @@ const std::string SharedObjectMsg::toStr() const
     return out;
 }
 
-unsigned int SharedObjectMsg::size() const
-{
-    return data_.size() + sizeof(SOMsgHeader);
-}
 
 int SharedObjectMsg::fromStr(const std::string &data)
 {
@@ -253,6 +258,7 @@ int SharedObjectMsg::fromStr(const std::string &data)
     const char* pData = data.data();
     SOMsgHeader &pH = * ( (SOMsgHeader*) pData );
     if(pH.size + sizeof(SOMsgHeader) != data.size()){
+        printf("Incorrent SharedObjectMsg data\n");
         return -2;
     }
 
@@ -280,7 +286,7 @@ int SharedObjectMsg::send_by(zmq::socket_t &socket)
 
 }
 
-void SharedObjectMsg::p()
+void SharedObjectMsg::p() const
 {
     printf("v%d s%d r%d m%d t%d r1%d r2%d: %s\n", ver_, send_id_, recv_id_, msg_magic_, msg_act_, r1_, r2_, data_.c_str());
 }
@@ -302,19 +308,35 @@ int SharedObjectSrv::bind(const std::__1::string host, int port)
 
     // do something
     new std::thread([this]{
-        int k = 10;
-        while(k++ ){
-            printf("Pub # %d\n", k );
-            time_t t = time(NULL);
-            so_.set("k"+std::to_string(k), ValueObject("",10000+k,0, t));
-            SOMsg msg;
-            msg.send_id_ = 0;
-            msg.recv_id_ = 1024*1024*1024;
+        process_testing();
+    });
+}
+
+void SharedObjectSrv::process_testing()
+{
+    int k = 0;
+    while( ++k ){
+
+        time_t t = time(NULL);
+        printf("Pub # %d Time is %d\n", k,t );
+        ValueObject vo("key is k"+std::to_string(k),10000+k,0, t);
+        std::string key = "k"+std::to_string(k);
+        so_.set(key, ValueObject("",10000+k,0, t));
+        SOMsg msg;
+        msg.send_id_ = 0;
+        msg.recv_id_ = ~0; // all
+
+        if(k%10 == 0){
             msg.msg_act_ = SOMsg::SYNC_RESP;
             msg.data_ = so_.toStr();
-            msg.ver_ = 10000+k;
-            msg.send_by(socket_pub);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }else{
+            msg.msg_act_ = SOMsg::SET_RESP;
+            msg.data_ = KVObject::toStr(key, vo);
+            msg.r1_ = SOMsg::MSG_KV;
         }
-    });
+        msg.ver_ = 10000+k;
+        msg.p();
+        msg.send_by(socket_pub);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 }
