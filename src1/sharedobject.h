@@ -17,6 +17,7 @@ public:
     unsigned int size() const;
     int fromStr(const std::string &data);
     int send_by(zmq::socket_t & socket);
+
 public:
     NUM msg_magic_ = 9527; // a magic number (flag0)
     NUM msg_act_ = 0; // the message type number (flag1)
@@ -33,16 +34,17 @@ public:
 class SharedObjectCli
 {
 public:
-    typedef void(*Callback_Fnc)(const SO_STR &);
+    typedef std::function<void(const SO_STR&)> Fn;
+    //typedef void(*Callback_Fnc)(const SO_STR &);
     SharedObjectCli(int id=1);
     int set(const SO_STR& key, const SO_STR & val);
     int get(const SO_STR& key, SO_STR& val);
-    int on(const SO_STR& key, Callback_Fnc fnc);
+    int on(const SO_STR& key, Fn fnc);
     int connect(std::string host="tcp://127.0.0.1", int port = 10086);
 
 private:
     SharedObjectData so_;
-    std::map<SO_STR, Callback_Fnc> callbacks_;
+    std::map<SO_STR, Fn> callbacks_;
     NUM id_;
 
     zmq::context_t context_;
@@ -78,12 +80,22 @@ public:
     int bind(const std::string host="tcp://127.0.0.1", int port = 10086);
 public:
     void process_testing();
+
+
+private:
+    void process_respqueue();
+    void process_respsocket();
+    std::thread *thread_process_resps = nullptr;
+    std::thread *thread_process_respq = nullptr;
+
 private:
     SharedObjectData so_;
     zmq::context_t context;
     zmq::socket_t  socket_pub;
     zmq::socket_t  socket_resp;
     NUM id_ = 0;
+    BlockingQueue<SharedObjectMsg> queue_resp;
+    int setnpub(const SO_STR& key, ValueObject &vo);
 };
 
 #endif // SHAREDOBJECT_H

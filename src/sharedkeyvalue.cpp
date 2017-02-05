@@ -102,8 +102,6 @@ int SharedKeyValueCli::init(std::string host, int port)
    // connect to server and listen to the server pub in one thread
    socket_sub.setsockopt(ZMQ_IDENTITY, "Hello", 5);
    socket_sub.setsockopt(ZMQ_SUBSCRIBE, "", 0);
-
-
    socket_sub.connect((host_ + ":" + std::to_string(port_)).c_str());
    printf("Sub is on %s\n", (host_+":"+std::to_string(port_)).c_str() );
 

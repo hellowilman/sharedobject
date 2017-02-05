@@ -35,7 +35,7 @@ int main(int argc, char* argv[]){
 
 MainApp::MainApp()
 {
-
+    std::thread t;
 }
 
 void MainApp::Test1()
@@ -101,6 +101,9 @@ void MainApp::start_cli()
 {
     SharedObjectCli client;
     client.connect();
+    client.on("k5",[](const std::string &msg){
+        printf("Callback at %s %s\n","",msg.c_str());
+    });
     while(1){
         std::this_thread::sleep_for(std::chrono::seconds(10));
     }
