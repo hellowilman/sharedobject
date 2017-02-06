@@ -108,6 +108,18 @@ int SharedObjectCli::connect(std::string host, int port)
     return 0;
 }
 
+int SharedObjectCli::sync()
+{
+    SOMsg somsg;
+    somsg.msg_act_ = SOMsg::SYNC;
+    somsg.send_id_ = id_;
+    somsg.recv_id_ = 0; // server
+    somsg.ver_ = so_.getVer();
+    somsg.data_ = "";
+   printf("Put somsg in queue:");somsg.p();
+    queue_req.put(somsg);
+}
+
 void SharedObjectCli::process_subsocket()
 {
     try{
@@ -146,6 +158,7 @@ void SharedObjectCli::process_reqqueue()
     try{
         while(1){
             SharedObjectMsg somsg = queue_req.take();
+            printf("process somsg in queue:");somsg.p();
             somsg.send_by(socket_req_);
             std::string recv = s_recv(socket_req_);
             process_somsg(recv);
@@ -207,6 +220,8 @@ int SharedObjectCli::process_setresp(const SharedObjectMsg & somsg)
 int SharedObjectCli::process_syncresp(const SharedObjectMsg & somsg )
 {
     if( so_.init(somsg.data_) >=0){
+        printf("Initial from server\n");
+        so_.p();
         return 0;
     } else{
         printf("Incorrect sync-resp data\n");
@@ -263,13 +278,14 @@ const std::string SharedObjectMsg::toStr() const
 
 int SharedObjectMsg::fromStr(const std::string &data)
 {
-    if(data.size() <= sizeof(SOMsgHeader)){
+    if(data.size() < sizeof(SOMsgHeader)){
+        printf("Incorrent SharedObjectMsg data 1\n");
         return -1;
     }
     const char* pData = data.data();
     SOMsgHeader &pH = * ( (SOMsgHeader*) pData );
     if(pH.size + sizeof(SOMsgHeader) != data.size()){
-        printf("Incorrent SharedObjectMsg data\n");
+        printf("Incorrent SharedObjectMsg data 2\n");
         return -2;
     }
 
@@ -318,12 +334,16 @@ int SharedObjectSrv::bind(const std::__1::string host, int port)
     printf("pub on %s\n", (host+":"+std::to_string(port)).c_str());
     printf("resp on %s\n", (host+":"+std::to_string(port+1)).c_str());
     // start the thread
-
+    if(!thread_process_resps){
+        thread_process_resps = new std::thread([this]{
+            process_respsocket();
+        });
+    }
 
 
     // do something
     new std::thread([this]{
-        process_testing();
+        //process_testing();
     });
 }
 
@@ -364,9 +384,9 @@ void SharedObjectSrv::process_respsocket()
     while(1){
         try{
             std::string reqstr = s_recv(socket_resp);
+            //printf("Recv req msg:%d-%s\n",reqstr.size(), reqstr.c_str());
             SOMsg somsg, resp_msg;
             int rc = somsg.fromStr(reqstr);
-
             if(rc >=0){
                 if(somsg.msg_act_ == SOMsg::SET){
                     // update so_
@@ -381,6 +401,8 @@ void SharedObjectSrv::process_respsocket()
                     }
                 }
                 if(somsg.msg_act_ == SOMsg::SYNC){
+                    printf("Put all the sync data");
+                    so_.p();
                     resp_msg.data_ = so_.toStr();
                     resp_msg.msg_act_ = SOMsg::SYNC_RESP;
                 }
@@ -389,6 +411,7 @@ void SharedObjectSrv::process_respsocket()
             resp_msg.send_id_ = id_;
             resp_msg.recv_id_ = somsg.send_id_;
             resp_msg.send_by(socket_resp);
+
         }catch(std::exception &e){
             printf("process resp socket error: %s \n", e.what());
         }
@@ -398,7 +421,7 @@ void SharedObjectSrv::process_respsocket()
 int SharedObjectSrv::setnpub(const std::__1::string &key, ValueObject &vo)
 {
     // update so_
-    if(vo.ver_ > so_.get(key).ver_){
+    if(vo.ver_ >= so_.get(key).ver_){
         so_.setVer(so_.getVer()+1);
         vo.ver_ = so_.getVer();
         vo.time_ = time_stamp();

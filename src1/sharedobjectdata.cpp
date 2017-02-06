@@ -21,7 +21,7 @@ const ValueObject &SharedObjectData::get(const std::__1::string &key)
     if(data_.find(key)!=data_.end()){
         return data_[key];
     }else{
-        printf("Cannot find the key %s\n", key.c_str());
+        //printf("Cannot find the key %s\n", key.c_str());
         return ValueObject();
     }
 }
@@ -29,8 +29,11 @@ const ValueObject &SharedObjectData::get(const std::__1::string &key)
 void SharedObjectData::set(const std::string &key, const ValueObject &vo)
 {
     if(key.size()>0){
-       if(get(key).ver_ < vo.ver_){
+       if(get(key).ver_ <= vo.ver_){
+           //printf("Set OK!: the version is %d-%d\n", get(key).ver_, vo.ver_);
            data_[key] = vo;
+       }else{
+           //printf("Set failed!: the version is outdate %d-%d\n", get(key).ver_, vo.ver_);
        }
     }
 }
@@ -78,6 +81,7 @@ int SharedObjectData::init(const std::string &data)
     ver_ = pH->ver;
     int kv_num = pH->vo_num;
     int rest_num = pH->size;
+    //printf("kv_num %d\n", kv_num);
     while(rest_num>0 && kv_num > 0){
         int len = *((NUM*)pData);
         std::string kvstr(pData+sizeof(NUM), len);
@@ -93,7 +97,7 @@ int SharedObjectData::init(const std::string &data)
     return pH->vo_num - kv_num;
 }
 
-void SharedObjectData::p()
+void SharedObjectData::p() const
 {
     printf("SharedObject ver: %d\n", ver_);
     for(auto & kv:data_){

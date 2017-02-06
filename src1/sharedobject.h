@@ -41,6 +41,7 @@ public:
     int get(const SO_STR& key, SO_STR& val);
     int on(const SO_STR& key, Fn fnc);
     int connect(std::string host="tcp://127.0.0.1", int port = 10086);
+    int sync();
 
 private:
     SharedObjectData so_;

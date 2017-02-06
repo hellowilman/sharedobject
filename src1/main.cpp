@@ -104,6 +104,8 @@ void MainApp::start_cli()
     client.on("k5",[](const std::string &msg){
         printf("Callback at %s %s\n","",msg.c_str());
     });
+    client.set("k5","this is K5");
+    client.sync();
     while(1){
         std::this_thread::sleep_for(std::chrono::seconds(10));
     }
