@@ -13,7 +13,8 @@ SOURCES += main.cpp \
 
 
 ZMQ{
-    ZMQ_PATH =/usr/local/Cellar/zeromq/4.2.0
+    ZMQ_PATH =/usr/local/Cellar/zeromq/4.2.1 # for Mac Mini
+    ZMQ_PATH =/usr/local/Cellar/zeromq/4.2.0 # for MBP
     #ZMQ_PATH="E:\zeromq-4.2.0"
     INCLUDEPATH+= $${ZMQ_PATH}/include
     LIBS += -L$${ZMQ_PATH}/lib -lzmq
