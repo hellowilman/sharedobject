@@ -42,6 +42,8 @@ int SharedObjectCli::set(const std::string &key, const std::string &val)
     somsg.recv_id_ = 0; // server
     somsg.data_ = KVObject::toStr(key,vo);
     queue_req.put(somsg);
+
+	return 0;
 }
 
 int SharedObjectCli::get(const std::string &key, std::string &val)
@@ -51,7 +53,7 @@ int SharedObjectCli::get(const std::string &key, std::string &val)
     return 0;
 }
 
-int SharedObjectCli::on(const std::__1::string &key, Fn fnc)
+int SharedObjectCli::on(const std::string &key, Fn fnc)
 {
     if(key.size()){
         callbacks_[key] = fnc;
@@ -118,6 +120,7 @@ int SharedObjectCli::sync()
     somsg.data_ = "";
    printf("Put somsg in queue:");somsg.p();
     queue_req.put(somsg);
+	return 0;
 }
 
 void SharedObjectCli::process_subsocket()
@@ -327,7 +330,7 @@ SharedObjectSrv::SharedObjectSrv():
 
 }
 
-int SharedObjectSrv::bind(const std::__1::string host, int port)
+int SharedObjectSrv::bind(const std::string host, int port)
 {
     socket_pub.bind(host+":"+std::to_string(port));
     socket_resp.bind(host+":"+std::to_string(port+1));
@@ -345,6 +348,8 @@ int SharedObjectSrv::bind(const std::__1::string host, int port)
     new std::thread([this]{
         //process_testing();
     });
+
+	return 0;
 }
 
 void SharedObjectSrv::process_testing()
@@ -418,7 +423,7 @@ void SharedObjectSrv::process_respsocket()
     }
 }
 
-int SharedObjectSrv::setnpub(const std::__1::string &key, ValueObject &vo)
+int SharedObjectSrv::setnpub(const std::string &key, ValueObject &vo)
 {
     // update so_
     if(vo.ver_ >= so_.get(key).ver_){
@@ -435,4 +440,6 @@ int SharedObjectSrv::setnpub(const std::__1::string &key, ValueObject &vo)
     pubmsg.msg_act_ = SOMsg::SET_RESP;
     pubmsg.data_ = KVObject::toStr(key,vo);
     pubmsg.send_by(socket_pub);
+
+	return 0;
 }

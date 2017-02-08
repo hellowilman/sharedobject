@@ -2,12 +2,20 @@
 #include "cmdline.h"
 #include <sharedobjectdata.h>
 #include "sharedobject.h"
+
+#define _NUM_OF_CLIENTS (2)
 void print(const ValueObject & vo)
 {
     vo.p();
 }
 
 int main(int argc, char* argv[]){
+	system("pause");
+
+	MainApp app;
+	app.Test_MultiClients();
+
+	/*
     cmdline::parser cmd;
     cmd.add("client", 'c',"start as client");
     cmd.add("server",'s',"start as a server");
@@ -28,7 +36,7 @@ int main(int argc, char* argv[]){
     }else{
         printf("Please use --help or -? for usage. \n");
     }
-
+	*/
     return 0;
 }
 
@@ -116,4 +124,52 @@ void MainApp::test_all()
     Test1();
     Test2();
     Test3();
+}
+
+void MainApp::ServerCall()
+{
+	//std::this_thread::sleep_for(std::chrono::seconds(5));
+	std::cout << "Launched by Server" << std::endl;
+	start_srv();
+}
+void MainApp::ClientsCall(int  ClientID)
+{
+	std::this_thread::sleep_for(std::chrono::seconds(ClientID));
+	std::cout << "Launched by Client" << ClientID << std::endl;
+
+	SharedObjectCli client;
+	client.connect();
+	client.on("k5", [](const std::string &msg) {
+		printf("Callback at %s %s\n", "", msg.c_str());
+	});
+
+	char buff[_MAX_PATH];
+	snprintf(buff,_MAX_PATH,"This is %d", ClientID);
+	std::string msg = buff;
+	client.set("k5", msg);
+	client.sync();
+	while (1) {
+		std::this_thread::sleep_for(std::chrono::seconds(10));
+	}
+
+	
+}
+
+void MainApp::Test_MultiClients()
+{
+	std::thread	Server;
+	std::thread Clients[_NUM_OF_CLIENTS];
+
+	Server = std::thread(&MainApp::ServerCall, this);
+
+	for (int ClientID = 0; ClientID < _NUM_OF_CLIENTS; ++ClientID)
+	{
+		Clients[ClientID] = std::thread(&MainApp::ClientsCall, this, ClientID);
+	}	
+		
+	for (int ClientID = 0; ClientID < _NUM_OF_CLIENTS; ++ClientID)
+	{
+		Clients[ClientID].join();
+	}
+	Server.join();
 }

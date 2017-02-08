@@ -12,6 +12,9 @@ public:
     void test_all();
     void start_srv();
     void start_cli();
+	void Test_MultiClients();
+	void ClientsCall(int  ClientID);
+	void ServerCall();
 };
 
 #endif // MAIN_H
