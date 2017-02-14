@@ -13,7 +13,8 @@ public:
     void start_srv();
     void start_cli();
 	void Test_MultiClients();
-	void ClientsCall(int  ClientID);
+	void ActiveClientsCall(int  ClientID);
+	void PassiveClientsCall(int  ClientID);
 	void ServerCall();
 };
 

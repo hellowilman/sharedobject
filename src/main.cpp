@@ -3,7 +3,9 @@
 #include <sharedobjectdata.h>
 #include "sharedobject.h"
 
-#define _NUM_OF_CLIENTS (2)
+#define _NUM_OF_CLIENTS (1)
+SO_STR	mykey = "k5";
+
 void print(const ValueObject & vo)
 {
     vo.p();
@@ -132,22 +134,24 @@ void MainApp::ServerCall()
 	std::cout << "Launched by Server" << std::endl;
 	start_srv();
 }
-void MainApp::ClientsCall(int  ClientID)
+void MainApp::ActiveClientsCall(int  ClientID)
 {
-	std::this_thread::sleep_for(std::chrono::seconds(ClientID));
+	std::this_thread::sleep_for(std::chrono::seconds(ClientID *3 + 5));
 	std::cout << "Launched by Client" << ClientID << std::endl;
 
 	SharedObjectCli client;
 	client.connect();
-	client.on("k5", [](const std::string &msg) {
+	client.sync();
+	client.on(mykey, [](const std::string &msg) {
 		printf("Callback at %s %s\n", "", msg.c_str());
 	});
 
 	char buff[_MAX_PATH];
-	snprintf(buff,_MAX_PATH,"This is %d", ClientID);
+	snprintf(buff, _MAX_PATH, "This is %d", ClientID + 5);
 	std::string msg = buff;
-	client.set("k5", msg);
-	client.sync();
+	client.set(mykey, msg);
+
+	
 	while (1) {
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
@@ -155,21 +159,51 @@ void MainApp::ClientsCall(int  ClientID)
 	
 }
 
+void MainApp::PassiveClientsCall(int  ClientID)
+{
+	std::this_thread::sleep_for(std::chrono::seconds(ClientID * 3 + 5));
+	std::cout << "Launched by Client" << ClientID << std::endl;
+
+	SharedObjectCli client;
+	client.connect();
+	client.sync();
+	client.on(mykey, [](const std::string &msg) {
+		printf("Callback at %s %s\n", "", msg.c_str());
+	});
+
+	std::string msg;
+	SO_STR	key = mykey;
+	client.get(key, msg);
+
+
+	while (1) {
+		std::this_thread::sleep_for(std::chrono::seconds(100));
+	}
+
+}
+
 void MainApp::Test_MultiClients()
 {
 	std::thread	Server;
-	std::thread Clients[_NUM_OF_CLIENTS];
+	std::thread ActiveClients[_NUM_OF_CLIENTS];
+	std::thread PassiveClients[_NUM_OF_CLIENTS];
 
 	Server = std::thread(&MainApp::ServerCall, this);
-
+	
 	for (int ClientID = 0; ClientID < _NUM_OF_CLIENTS; ++ClientID)
 	{
-		Clients[ClientID] = std::thread(&MainApp::ClientsCall, this, ClientID);
+		ActiveClients[ClientID] = std::thread(&MainApp::ActiveClientsCall, this, ClientID);
 	}	
-		
+	
 	for (int ClientID = 0; ClientID < _NUM_OF_CLIENTS; ++ClientID)
 	{
-		Clients[ClientID].join();
+		PassiveClients[ClientID] = std::thread(&MainApp::PassiveClientsCall, this, ClientID+2);
+	}
+	
+	for (int ClientID = 0; ClientID < _NUM_OF_CLIENTS; ++ClientID)
+	{
+		ActiveClients[ClientID].join();
+		PassiveClients[ClientID].join();
 	}
 	Server.join();
 }
