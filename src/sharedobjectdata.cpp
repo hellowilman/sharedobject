@@ -1,6 +1,8 @@
 #include "sharedobjectdata.h"
 #include <exception>
 #include <iostream>
+#include <fstream>
+
 
 #define VO_HEADER_SIZE 16
 typedef struct{
@@ -19,10 +21,10 @@ typedef struct{
 
 const ValueObject &SharedObjectData::get(const std::string &key)
 {
-	for (auto elem : data_)
-	{
-		std::cout << elem.first << "\n";
-	}
+//	for (auto elem : data_)
+//	{
+//        // std::cout << elem.first << "\n";
+//	}
 
 	if (data_.find(key) != data_.end())
 	{
@@ -38,33 +40,41 @@ const ValueObject &SharedObjectData::get(const std::string &key)
 void SharedObjectData::set(const std::string &key, const ValueObject &vo)
 {
     if(key.size()>0){
-       if(get(key).ver_ <= vo.ver_){
-           //printf("Set OK!: the version is %d-%d\n", get(key).ver_, vo.ver_);
-           data_[key] = vo;
+
+       if( ver_ < vo.ver_){
+           data_[key] = vo; // update value
+           ver_ = vo.ver_;  // update version
        }else{
-           //printf("Set failed!: the version is outdate %d-%d\n", get(key).ver_, vo.ver_);
+           if(get(key).ver_ <= vo.ver_){
+               data_[key] = vo;
+           }
        }
+//       if(get(key).ver_ <= vo.ver_){
+//           //printf("Set OK!: the version is %d-%d\n", get(key).ver_, vo.ver_);
+//           data_[key] = vo;
+//       }else{
+//           //printf("Set failed!: the version is outdate %d-%d\n", get(key).ver_, vo.ver_);
+//       }
 
-	   {
-		   if (data_.find(key) != data_.end())
-		   {
-			   char tab2[1024];
-			   strncpy_s(tab2, key.c_str(), sizeof(tab2));
-			   tab2[sizeof(tab2) - 1] = 0;
-
-			   printf("the key %s is found \n", tab2);
-			   for (auto elem : data_)
-			   {
-				   std::cout << elem.first << "\n";
-			   }
-		   }
-	   }
+//	   {
+//           if (data_.find(key) != data_.end())
+//           {
+//               char tab2[1024];
+//               strncpy_s(tab2, key.c_str(), sizeof(tab2));
+//               tab2[sizeof(tab2) - 1] = 0;
+//               printf("the key %s is found \n", tab2);
+//               for (auto elem : data_)
+//               {
+//                   std::cout << elem.first << "\n";
+//               }
+//           }
+//	   }
     }
 }
 
 const std::string SharedObjectData::toStr() const
 {
-    // preparing the out
+    // calculate the size and prepaer the buffer
     int sz = sizeof(SoHeader); // header
     for(auto & kv: data_){
         auto& key = kv.first;
@@ -121,13 +131,23 @@ int SharedObjectData::init(const std::string &data)
     return pH->vo_num - kv_num;
 }
 
-void SharedObjectData::p() const
+void SharedObjectData::p(const std::string fln) const
 {
-    printf("SharedObject ver: %d\n", ver_);
-    for(auto & kv:data_){
-        printf("key: %s val: ", kv.first.c_str());
-        kv.second.p();
+    std::ofstream ofs;
+    if(fln.size()){
+        ofs.open(fln);
+        ofs <<"SharedObject ver: " <<  ver_ <<"\n";
+        for(auto & kv:data_){
+            ofs <<"" <<  kv.first.c_str() << ":" << kv.second.val_<<"\n";
+        }
+    }else{
+        printf( "SharedObject ver: %d\n", ver_);
+        for(auto & kv:data_){
+            printf("key: %s val: ", kv.first.c_str());
+            kv.second.p();
+        }
     }
+
 }
 
 

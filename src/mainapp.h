@@ -16,6 +16,8 @@ public:
 	void ActiveClientsCall(int  ClientID);
 	void PassiveClientsCall(int  ClientID);
 	void ServerCall();
+
+    void Test_MultiClients2(const int num = 5, const int time_sec = 10); // this is a testing by wilman
 };
 
 #endif // MAIN_H

@@ -40,7 +40,7 @@ public:
     int init(const std::string &data);
     void clear(){data_.clear();}
 public:
-    void p() const; // print it;
+    void p(const std::string = "" ) const; // print it;
     unsigned int getVer() const{return ver_;}
     void setVer(unsigned int ver) {ver_ = ver;}
 

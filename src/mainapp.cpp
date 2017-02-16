@@ -1,45 +1,18 @@
-#include "main.h"
+#include "mainapp.h"
 #include "cmdline.h"
 #include <sharedobjectdata.h>
 #include "sharedobject.h"
+#include "md5.h"
+#include <fstream>
+#include <mutex>
+#include <stdio.h>
 
 #define _NUM_OF_CLIENTS (1)
 SO_STR	mykey = "k5";
 
-void print(const ValueObject & vo)
+static void print(const ValueObject & vo)
 {
     vo.p();
-}
-
-int main(int argc, char* argv[]){
-	system("pause");
-
-	MainApp app;
-	app.Test_MultiClients();
-
-	/*
-    cmdline::parser cmd;
-    cmd.add("client", 'c',"start as client");
-    cmd.add("server",'s',"start as a server");
-    cmd.parse_check(argc,argv);
-    if(cmd.exist("client")){
-        // client
-        printf("Start Client!\n");
-        MainApp app;
-        app.start_cli();
-
-    }else
-    if(cmd.exist("server")){
-        // server
-        printf("Start Server!\n");
-        MainApp app;
-        app.start_srv();
-
-    }else{
-        printf("Please use --help or -? for usage. \n");
-    }
-	*/
-    return 0;
 }
 
 
@@ -132,7 +105,72 @@ void MainApp::ServerCall()
 {
 	//std::this_thread::sleep_for(std::chrono::seconds(5));
 	std::cout << "Launched by Server" << std::endl;
-	start_srv();
+    start_srv();
+}
+
+
+static void sleep_ms(const long int num){
+    std::this_thread::sleep_for(std::chrono::milliseconds(num));
+}
+
+static void sleep_sec(const long int num){
+    sleep_ms(num*1000);
+}
+
+void MainApp::Test_MultiClients2(const int num, const int time_sec)
+{
+    // create clients
+    bool start = true;
+
+    std::string *hexmd5s = new std::string[num];
+    std::thread **threads = new std::thread*[num];
+    SharedObjectCli * clients = new SharedObjectCli[num];
+
+    std::mutex md5_mutex;
+
+    for(int id = 0; id < num;id++){
+        threads[id] = new std::thread([&clients,&start,id,hexmd5s,&md5_mutex](){
+            sleep_ms(1000);
+            SharedObjectCli& cli = clients[id];
+            cli.connect();
+            cli.sync();
+            srand (id);
+            int k =0;
+            while(start){
+                // do setting
+                // printf("thread %d working \n", id);
+                int r = rand() % 5000;
+                std::string key = "worker" + std::to_string(id) + "_" + std::to_string(r);
+                std::string val =std::to_string(r);
+                cli.set(key,val);
+                printf("cli#%d\t set %s\t:\t%s \t%d\n", id, key.c_str(), val.c_str(),k++);
+                sleep_ms(100 + r/50);
+            }
+            printf("thread %d done!\n", id );
+            sleep_ms(2000); // wait for 2 seconds
+
+
+//            std::lock_guard<std::mutex> lock(md5_mutex);
+//            hexmd5s[id] =cli.hexmd5();
+
+        });
+        if(threads[id]->joinable()){
+            printf("Worker %d started\n", id);
+        }
+        sleep_ms(300);
+    }
+    sleep_sec(time_sec);
+    start = false;
+    sleep_sec(5);
+    // check by hexmd5
+    for(int i=0; i < num; i++){
+        if(threads[i]->joinable())
+            threads[i]->join();
+        std::string fln = "test_" + std::to_string(i) + ".txt";
+        remove(fln.c_str());
+        clients[i].print_info(fln);
+    }
+    printf("all done\n");
 }
 void MainApp::ActiveClientsCall(int  ClientID)
 {

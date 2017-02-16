@@ -1,5 +1,6 @@
 #include "sharedobject.h"
 #include <time.h>
+
 static bool
 s_send (zmq::socket_t & socket, const std::string & string) {
 
@@ -42,7 +43,6 @@ int SharedObjectCli::set(const std::string &key, const std::string &val)
     somsg.recv_id_ = 0; // server
     somsg.data_ = KVObject::toStr(key,vo);
     queue_req.put(somsg);
-
 	return 0;
 }
 
@@ -118,9 +118,20 @@ int SharedObjectCli::sync()
     somsg.recv_id_ = 0; // server
     somsg.ver_ = so_.getVer();
     somsg.data_ = "";
-   printf("Put somsg in queue:");somsg.p();
+    printf("Put somsg in queue:");somsg.p();
     queue_req.put(somsg);
-	return 0;
+    return 0;
+}
+
+#include "md5.h"
+const std::string SharedObjectCli::hexmd5() const
+{
+    return md5(so_.toStr());
+}
+
+void SharedObjectCli::print_info(const std::string fln) const
+{
+    so_.p(fln);
 }
 
 void SharedObjectCli::process_subsocket()
@@ -148,7 +159,7 @@ void SharedObjectCli::process_subqueue()
     try{
         while(1){
             SharedObjectMsg somsg = queue_sub.take();
-            printf("Sub Queue Msg %d:%s\n", somsg.ver_, somsg.data_.c_str());
+            // printf("Sub Queue Msg %d:%s\n", somsg.ver_, somsg.data_.c_str());
             process_somsg(somsg);
         }
     }catch(std::exception &e){
@@ -161,7 +172,7 @@ void SharedObjectCli::process_reqqueue()
     try{
         while(1){
             SharedObjectMsg somsg = queue_req.take();
-            printf("process somsg in queue:");somsg.p();
+            // printf("process somsg in queue:");somsg.p();
             somsg.send_by(socket_req_);
             std::string recv = s_recv(socket_req_);
             process_somsg(recv);
@@ -207,15 +218,15 @@ int SharedObjectCli::process_setresp(const SharedObjectMsg & somsg)
     ValueObject vo;
     std::string k;
     KVObject::fromStr(somsg.data_, k, vo);
-    somsg.p();
-    printf("insert k-v: %s-%s\n",k.c_str(), vo.val_.c_str());
+    // somsg.p();
+    // printf("insert k-v: %s-%s\n",k.c_str(), vo.val_.c_str());
     so_.set(k,vo);
 
     // call the update callback
     if(callbacks_.find(k) != callbacks_.end()){
         callbacks_[k](vo.val_);
     }else{
-        printf("No callback for %s\n", k.c_str());
+        // printf("No callback for %s\n", k.c_str());
     }
     return 0;
 }
@@ -224,7 +235,7 @@ int SharedObjectCli::process_syncresp(const SharedObjectMsg & somsg )
 {
     if( so_.init(somsg.data_) >=0){
         printf("Initial from server\n");
-        so_.p();
+        // so_.p();
         return 0;
     } else{
         printf("Incorrect sync-resp data\n");
@@ -263,6 +274,7 @@ const std::string SharedObjectMsg::toStr() const
     int sz = size() ;
     std::string out(sz,0);
     char* pData = (char*) out.data();
+
     // set the header
     SOMsgHeader *pH = (SOMsgHeader*) pData;
     pH->flag_magic = msg_magic_;
@@ -273,6 +285,7 @@ const std::string SharedObjectMsg::toStr() const
     pH->ver = ver_;
     pH->r1 = r1_;
     pH->r2 = r2_;
+
     // set the body
     memcpy(pData+sizeof(SOMsgHeader), data_.data(), data_.size());
     return out;
@@ -393,29 +406,36 @@ void SharedObjectSrv::process_respsocket()
             SOMsg somsg, resp_msg;
             int rc = somsg.fromStr(reqstr);
             if(rc >=0){
-                if(somsg.msg_act_ == SOMsg::SET){
+                if(somsg.msg_act_ == SOMsg::SET){ // set the so
                     // update so_
                     ValueObject vo;
                     SO_STR key;
                     rc = KVObject::fromStr(somsg.data_, key,vo);
                     if(rc >=0){
-                        setnpub(key,vo);
                         // prepare msg response to requester
                         resp_msg.msg_act_ = SOMsg::ACK;
                         resp_msg.data_ = "";
+                        resp_msg.ver_ = so_.getVer();
+                        resp_msg.send_id_ = id_;
+                        resp_msg.recv_id_ = somsg.send_id_;
+                        resp_msg.send_by(socket_resp); // replay for
+
+                        //  setnpub(key,vo);
+                        setnpub(key,vo); // tell all the client
                     }
                 }
-                if(somsg.msg_act_ == SOMsg::SYNC){
+                if(somsg.msg_act_ == SOMsg::SYNC){ // do sync
                     printf("Put all the sync data");
                     so_.p();
                     resp_msg.data_ = so_.toStr();
                     resp_msg.msg_act_ = SOMsg::SYNC_RESP;
+                    resp_msg.ver_ = so_.getVer();
+                    resp_msg.send_id_ = id_;
+                    resp_msg.recv_id_ = somsg.send_id_;
+                    resp_msg.send_by(socket_resp);
                 }
             }
-            resp_msg.ver_ = so_.getVer();
-            resp_msg.send_id_ = id_;
-            resp_msg.recv_id_ = somsg.send_id_;
-            resp_msg.send_by(socket_resp);
+
 
         }catch(std::exception &e){
             printf("process resp socket error: %s \n", e.what());
@@ -427,10 +447,19 @@ int SharedObjectSrv::setnpub(const std::string &key, ValueObject &vo)
 {
     // update so_
     if(vo.ver_ >= so_.get(key).ver_){
+        // if the version is the same as server. do update
         so_.setVer(so_.getVer()+1);
         vo.ver_ = so_.getVer();
         vo.time_ = time_stamp();
         so_.set(key,vo);
+    }else{
+        // if the version is less than the server. check if the version is > key version
+        if(vo.ver_ >= so_.get(key).ver_){
+            so_.setVer(so_.getVer()+1);
+            vo.ver_ = so_.getVer();
+            vo.time_ = time_stamp();
+            so_.set(key,vo);
+        }
     }
     // pub the update
     SOMsg pubmsg;

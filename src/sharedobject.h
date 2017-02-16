@@ -10,6 +10,7 @@
 #include "blockqueue.h"
 
 #define SO_STR std::string
+#define MAGIC_NUM
 class SharedObjectMsg{
 public:
     SharedObjectMsg(){}
@@ -21,14 +22,14 @@ public:
 public:
     NUM msg_magic_ = 9527; // a magic number (flag0)
     NUM msg_act_ = 0; // the message type number (flag1)
-    NUM send_id_ = 0;
-    NUM recv_id_ = 0;
-    NUM ver_ = 0;
-    NUM r1_ = 0,r2_ = 0;
-    std::string data_;
+    NUM send_id_ = 0; // the id for sender
+    NUM recv_id_ = 0; // the id for receiver
+    NUM ver_ = 0;     // the version
+    NUM r1_ = 0,r2_ = 0; // two reserved
+    std::string data_; // the message
     enum flag_act{SET = 1, SET_RESP, SYNC, SYNC_RESP, OUT_DATE, MISC, ACK};
     enum msg_type{MSG_SOD,MSG_KV};
-    void p() const;
+    void p() const; // print the data
 };
 
 class SharedObjectCli
@@ -42,6 +43,10 @@ public:
     int on(const SO_STR& key, Fn fnc);
     int connect(std::string host="tcp://127.0.0.1", int port = 10086);
     int sync();
+
+public: // these functions are only for testing or debug only!
+    const std::string hexmd5() const;
+    void print_info(const std::string fln = "") const;
 
 private:
     SharedObjectData so_;
@@ -85,7 +90,7 @@ public:
 
 private:
     void process_respqueue();
-    void process_respsocket();
+    void process_respsocket(); // a thread to process the socket request and send response
     std::thread *thread_process_resps = nullptr;
     std::thread *thread_process_respq = nullptr;
 
