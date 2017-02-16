@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="header">
+      <UniqueIdentifier>{beb52350-d57a-4d9b-b773-24c1cf64a80a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="blockqueue.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="main.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="sharedobjectdata.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="sharedobject.h">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="zmq.hpp">
+      <Filter>header</Filter>
+    </ClInclude>
+    <ClInclude Include="cmdline.h">
+      <Filter>header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="sharedobject.cpp" />
+    <ClCompile Include="sharedobjectdata.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="sharedkv.pro" />
+    <None Include="sharedkv.pro.user" />
+  </ItemGroup>
+</Project>

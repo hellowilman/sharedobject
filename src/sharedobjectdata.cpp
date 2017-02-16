@@ -1,5 +1,6 @@
 #include "sharedobjectdata.h"
 #include <exception>
+#include <iostream>
 
 #define VO_HEADER_SIZE 16
 typedef struct{
@@ -16,11 +17,19 @@ typedef struct{
     NUM reserve;
 } SoHeader;
 
-const ValueObject &SharedObjectData::get(const std::__1::string &key)
+const ValueObject &SharedObjectData::get(const std::string &key)
 {
-    if(data_.find(key)!=data_.end()){
+	for (auto elem : data_)
+	{
+		std::cout << elem.first << "\n";
+	}
+
+	if (data_.find(key) != data_.end())
+	{
         return data_[key];
-    }else{
+    }
+	else
+	{
         //printf("Cannot find the key %s\n", key.c_str());
         return ValueObject();
     }
@@ -35,6 +44,21 @@ void SharedObjectData::set(const std::string &key, const ValueObject &vo)
        }else{
            //printf("Set failed!: the version is outdate %d-%d\n", get(key).ver_, vo.ver_);
        }
+
+	   {
+		   if (data_.find(key) != data_.end())
+		   {
+			   char tab2[1024];
+			   strncpy_s(tab2, key.c_str(), sizeof(tab2));
+			   tab2[sizeof(tab2) - 1] = 0;
+
+			   printf("the key %s is found \n", tab2);
+			   for (auto elem : data_)
+			   {
+				   std::cout << elem.first << "\n";
+			   }
+		   }
+	   }
     }
 }
 
