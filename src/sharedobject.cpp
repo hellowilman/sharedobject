@@ -1,5 +1,6 @@
 #include "sharedobject.h"
 #include <time.h>
+#include "md5.h"
 
 static bool
 s_send (zmq::socket_t & socket, const std::string & string) {
@@ -27,6 +28,8 @@ SharedObjectCli::SharedObjectCli(int id):
     socket_sub_(context_,zmq::socket_type::sub)
 {
     thread_process_subs_ = nullptr;
+    thread_process_subq_ = nullptr;
+    thread_process_reqq_ = nullptr;
     id_ = id;
 }
 static long int time_stamp(){
@@ -94,15 +97,15 @@ int SharedObjectCli::connect(std::string host, int port)
     }
     printf("Start thread for req queue processing \n");
 
-    if(! thread_process_subs_->joinable() ){
+    if(!thread_process_subs_ || ! thread_process_subs_->joinable() ){
         printf("thread_process_subs_ faild!");
         return -1;
     }
-    if(! thread_process_subq_->joinable() ){
+    if(!thread_process_subq_ ||! thread_process_subq_->joinable() ){
         printf("thread_process_subq_ faild!");
         return -1;
     }
-    if(! thread_process_reqq_->joinable() ){
+    if(!thread_process_reqq_ ||! thread_process_reqq_->joinable() ){
         printf("thread_process_reqq_ faild!");
         return -1;
     }
@@ -112,6 +115,7 @@ int SharedObjectCli::connect(std::string host, int port)
 
 int SharedObjectCli::sync()
 {
+
     SOMsg somsg;
     somsg.msg_act_ = SOMsg::SYNC;
     somsg.send_id_ = id_;
@@ -123,7 +127,7 @@ int SharedObjectCli::sync()
     return 0;
 }
 
-#include "md5.h"
+
 const std::string SharedObjectCli::hexmd5() const
 {
     return md5(so_.toStr());
