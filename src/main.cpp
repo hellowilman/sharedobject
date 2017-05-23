@@ -20,6 +20,7 @@ int main(int argc, char* argv[]){
     cmd.add("multiclient",'m',"donig a multi-client testing");
     cmd.add<int>("clientnum",'n',"the client number", false);
     cmd.add<int>("testtime",'t',"the testing time in sec", false, 10);
+    cmd.add<std::string>("host",'h',"the testing time in sec", false, "tcp://127.0.0.1");
     cmd.parse_check(argc,argv);
 
     MainApp app;
@@ -41,7 +42,8 @@ int main(int argc, char* argv[]){
         // server
         printf("Start multiple thread for testing!\n");
 
-        app.Test_MultiClients2(cmd.get<int>("clientnum"), cmd.get<int>("testtime"));
+        app.Test_MultiClients2(cmd.get<int>("clientnum"), cmd.get<int>("testtime"),
+                               cmd.get<std::string>("host"));
         return 0;
     }
 

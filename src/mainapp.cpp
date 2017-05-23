@@ -117,7 +117,7 @@ static void sleep_sec(const long int num){
     sleep_ms(num*1000);
 }
 
-void MainApp::Test_MultiClients2(const int num, const int time_sec)
+void MainApp::Test_MultiClients2(const int num, const int time_sec, const std::string host)
 {
     // create clients
     bool start = true;
@@ -129,10 +129,11 @@ void MainApp::Test_MultiClients2(const int num, const int time_sec)
     std::mutex md5_mutex;
 
     for(int id = 0; id < num;id++){
-        threads[id] = new std::thread([&clients,&start,id,hexmd5s,&md5_mutex](){
+        threads[id] = new std::thread([&clients,&start,id,hexmd5s,&md5_mutex,&host](){
+
             sleep_ms(1000);
             SharedObjectCli& cli = clients[id];
-            cli.connect();
+            cli.connect(host);
             cli.sync();
             srand (id);
             int k =0;
@@ -145,14 +146,12 @@ void MainApp::Test_MultiClients2(const int num, const int time_sec)
                 cli.set(key,val);
                 printf("cli#%d\t set %s\t:\t%s \t%d\n", id, key.c_str(), val.c_str(),k++);
                 sleep_ms(100 + r/50);
+                if(k %50 == 1){
+                    cli.sync();
+                }
             }
-            printf("thread %d done!\n", id );
-            sleep_ms(2000); // wait for 2 seconds
-
-
-//            std::lock_guard<std::mutex> lock(md5_mutex);
-//            hexmd5s[id] =cli.hexmd5();
-
+            sleep_ms(5000); // wait for 5 seconds
+            printf("thread %d done! ", id );printf("exit\n");
         });
         if(threads[id]->joinable()){
             printf("Worker %d started\n", id);
@@ -161,7 +160,8 @@ void MainApp::Test_MultiClients2(const int num, const int time_sec)
     }
     sleep_sec(time_sec);
     start = false;
-    sleep_sec(5);
+    printf("sleep 10 seconds\n");
+    sleep_sec(10);
     // check by hexmd5
     for(int i=0; i < num; i++){
         if(threads[i]->joinable())

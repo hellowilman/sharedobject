@@ -21,6 +21,7 @@ typedef struct{
 
 const ValueObject &SharedObjectData::get(const std::string &key)
 {
+    std::lock_guard<std::mutex> lock(data_mtx_get_);
 //	for (auto elem : data_)
 //	{
 //        // std::cout << elem.first << "\n";
@@ -39,6 +40,7 @@ const ValueObject &SharedObjectData::get(const std::string &key)
 
 void SharedObjectData::set(const std::string &key, const ValueObject &vo)
 {
+    std::lock_guard<std::mutex> lock(data_mtx_set_);
     if(key.size()>0){
 
        if( ver_ < vo.ver_){

@@ -2,6 +2,7 @@
 #define SHAREDOBJECTDATA_H
 #include <string>
 #include <map>
+#include <mutex>
 
 #define NUM unsigned int
 
@@ -46,6 +47,8 @@ public:
 
 private:
     std::map<std::string, ValueObject> data_;
+    std::mutex data_mtx_set_;
+    std::mutex data_mtx_get_;
     NUM ver_;
 };
 

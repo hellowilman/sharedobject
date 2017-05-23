@@ -118,7 +118,7 @@ int SharedObjectCli::sync()
     somsg.recv_id_ = 0; // server
     somsg.ver_ = so_.getVer();
     somsg.data_ = "";
-    printf("Put somsg in queue:");somsg.p();
+    // printf("Put somsg in queue:"); somsg.p();
     queue_req.put(somsg);
     return 0;
 }
@@ -356,12 +356,11 @@ int SharedObjectSrv::bind(const std::string host, int port)
         });
     }
 
-
-    // do something
-    new std::thread([this]{
-        //process_testing();
-    });
-
+    if(!thread_process_respq){
+        thread_process_respq = new std::thread([this]{
+            process_pubqueue();
+        });
+    }
 	return 0;
 }
 
@@ -397,6 +396,20 @@ void SharedObjectSrv::process_testing()
     }
 }
 
+void SharedObjectSrv::process_pubqueue()
+{
+    while(1){
+        try{
+            SharedObjectMsg somsg = queue_pub.take();
+            // printf("process somsg in queue:");somsg.p();
+            somsg.send_by(socket_pub);
+        }
+        catch(std::exception &e){
+            printf("Error on req: %s\n", e.what());
+        }
+    }
+}
+
 void SharedObjectSrv::process_respsocket()
 {
     while(1){
@@ -419,14 +432,13 @@ void SharedObjectSrv::process_respsocket()
                         resp_msg.send_id_ = id_;
                         resp_msg.recv_id_ = somsg.send_id_;
                         resp_msg.send_by(socket_resp); // replay for
-
                         //  setnpub(key,vo);
                         setnpub(key,vo); // tell all the client
                     }
                 }
                 if(somsg.msg_act_ == SOMsg::SYNC){ // do sync
-                    printf("Put all the sync data");
-                    so_.p();
+                    printf("Sync:%d\t request from %d\n", sync_num_++, somsg.send_id_ );
+                    // so_.p();
                     resp_msg.data_ = so_.toStr();
                     resp_msg.msg_act_ = SOMsg::SYNC_RESP;
                     resp_msg.ver_ = so_.getVer();
@@ -459,6 +471,9 @@ int SharedObjectSrv::setnpub(const std::string &key, ValueObject &vo)
             vo.ver_ = so_.getVer();
             vo.time_ = time_stamp();
             so_.set(key,vo);
+        }else{
+            // it is out of data, no need to update this key val
+            return 1;
         }
     }
     // pub the update
@@ -468,7 +483,7 @@ int SharedObjectSrv::setnpub(const std::string &key, ValueObject &vo)
     pubmsg.recv_id_ = ~0;
     pubmsg.msg_act_ = SOMsg::SET_RESP;
     pubmsg.data_ = KVObject::toStr(key,vo);
-    pubmsg.send_by(socket_pub);
-
+    //pubmsg.send_by(socket_pub);
+    queue_pub.put(pubmsg);
 	return 0;
 }

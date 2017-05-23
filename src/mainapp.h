@@ -1,6 +1,6 @@
 #ifndef MAIN_H
 #define MAIN_H
-
+#include <string>
 
 class MainApp
 {
@@ -17,7 +17,8 @@ public:
 	void PassiveClientsCall(int  ClientID);
 	void ServerCall();
 
-    void Test_MultiClients2(const int num = 5, const int time_sec = 10); // this is a testing by wilman
+    void Test_MultiClients2(const int num = 5, const int time_sec = 10,
+                            const std::string host = "tcp://127.0.0.1"); // this is a testing by wilman
 };
 
 #endif // MAIN_H

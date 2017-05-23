@@ -83,13 +83,13 @@ private:
 class SharedObjectSrv{
 public:
     SharedObjectSrv();
-    int bind(const std::string host="tcp://127.0.0.1", int port = 10086);
+    int bind(const std::string host="tcp://0.0.0.0", int port = 10086);
 public:
     void process_testing();
 
 
 private:
-    void process_respqueue();
+    void process_pubqueue();
     void process_respsocket(); // a thread to process the socket request and send response
     std::thread *thread_process_resps = nullptr;
     std::thread *thread_process_respq = nullptr;
@@ -100,8 +100,10 @@ private:
     zmq::socket_t  socket_pub;
     zmq::socket_t  socket_resp;
     NUM id_ = 0;
-    BlockingQueue<SharedObjectMsg> queue_resp;
+    BlockingQueue<SharedObjectMsg> queue_pub;
     int setnpub(const SO_STR& key, ValueObject &vo);
+    unsigned long int sync_num_ = 0;
+    unsigned long int set_num_ = 0;
 };
 
 #endif // SHAREDOBJECT_H

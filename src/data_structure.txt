@@ -1,0 +1,3 @@
+MSG_HEADER
+flag | dump | version | data 
+1    | 3    | 4       | data 
