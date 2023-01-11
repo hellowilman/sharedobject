@@ -20,7 +20,7 @@ s_recv (zmq::socket_t & socket) {
     return std::string(static_cast<char*>(message.data()), message.size());
 }
 
-typedef SharedObjectMsg SOMsg;
+typedef SharedObjectMsg SOMsg; 
 
 SharedObjectCli::SharedObjectCli(int id):
     context_(1),
